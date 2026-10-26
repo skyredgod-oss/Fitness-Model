@@ -1,0 +1,8 @@
+node_modules
+package-lock.json
+backend/dist
+frontend/dist
+backend/data
+backend/prisma/*.db*
+test-results
+playwright-report

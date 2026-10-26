@@ -1,0 +1,19 @@
+node_modules/
+.env
+backend/.env
+frontend/.env
+backend/dist/
+frontend/dist/
+backend/prisma/*.db*
+backend/data/
+playwright-report/
+test-results/
+*.log
+
+# Never commit local environment variants or private keys.
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx

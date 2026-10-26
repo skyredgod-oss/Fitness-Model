@@ -1,0 +1,160 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String       @id @default(cuid())
+  username          String       @unique
+  name              String
+  passwordHash      String
+  role              String       @default("STAFF")
+  active            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  sessions          Session[]
+  attendances       Attendance[]
+  submittedPayments Payment[]    @relation("Submitted")
+  reviewedPayments  Payment[]    @relation("Reviewed")
+  audits            AuditLog[]
+}
+
+model Session {
+  id        String   @id
+  data      String
+  expiresAt DateTime
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([expiresAt])
+}
+
+model ServiceCategory {
+  id           String          @id @default(cuid())
+  code         String          @unique
+  name         String
+  priceSatang  Int
+  durationDays Int             @default(0)
+  active       Boolean         @default(true)
+  members      Member[]
+  attendances  Attendance[]
+  payments     Payment[]
+  revenues     RevenueRecord[]
+}
+
+model Member {
+  id          String          @id @default(cuid())
+  number      String          @unique
+  name        String
+  categoryId  String
+  category    ServiceCategory @relation(fields: [categoryId], references: [id])
+  startDate   String
+  endDate     String
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  attendances Attendance[]
+
+  @@index([name])
+}
+
+model Attendance {
+  id              String          @id @default(cuid())
+  date            String
+  categoryId      String
+  category        ServiceCategory @relation(fields: [categoryId], references: [id])
+  count           Int
+  unitPriceSatang Int
+  totalSatang     Int
+  memberId        String?
+  member          Member?         @relation(fields: [memberId], references: [id])
+  paymentId       String?         @unique
+  payment         Payment?        @relation(fields: [paymentId], references: [id])
+  method          String          @default("CASH")
+  note            String          @default("")
+  cancelled       Boolean         @default(false)
+  recorderId      String
+  recorder        User            @relation(fields: [recorderId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  revenue         RevenueRecord?
+
+  @@index([date, categoryId])
+}
+
+model Payment {
+  id               String          @id @default(cuid())
+  reference        String          @unique
+  verificationHash String
+  payerName        String
+  memberNumber     String?
+  categoryId       String
+  category         ServiceCategory @relation(fields: [categoryId], references: [id])
+  date             String
+  amountSatang     Int
+  method           String
+  note             String          @default("")
+  status           String          @default("PENDING")
+  submittedById    String?
+  submittedBy      User?           @relation("Submitted", fields: [submittedById], references: [id])
+  reviewerId       String?
+  reviewer         User?           @relation("Reviewed", fields: [reviewerId], references: [id])
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  cancelled        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  slip             PaymentSlip?
+  revenue          RevenueRecord?
+  attendance       Attendance?
+
+  @@index([date, status])
+}
+
+model PaymentSlip {
+  id          String  @id @default(cuid())
+  paymentId   String  @unique
+  payment     Payment @relation(fields: [paymentId], references: [id])
+  storageName String  @unique
+  sha256      String  @unique
+  mime        String
+  size        Int
+}
+
+model RevenueRecord {
+  id           String          @id @default(cuid())
+  paymentId    String?         @unique
+  payment      Payment?        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  attendanceId String?         @unique
+  attendance   Attendance?     @relation(fields: [attendanceId], references: [id], onDelete: Restrict)
+  date         String
+  categoryId   String
+  category     ServiceCategory @relation(fields: [categoryId], references: [id])
+  amountSatang Int
+  method       String
+  voided       Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+
+  @@index([date, categoryId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  before    String?
+  after     String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}
